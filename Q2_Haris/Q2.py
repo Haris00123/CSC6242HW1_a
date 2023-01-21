@@ -3,11 +3,12 @@
 import sqlite3
 from sqlite3 import Error
 import csv
-import os
+# import os
+# os.chdir('C:/Users/haris/Desktop/CSC_6242/HW1_a/Q2_Haris')
 #################################################################################
 
 ## Change to False to disable Sample
-SHOW = True
+SHOW = False
 
 ############### SAMPLE CLASS AND SQL QUERY ###########################
 ######################################################################
@@ -132,7 +133,7 @@ class HW2_sql():
         self.execute_query(connection, part_aiii_sql)
         
         ############### CREATE IMPORT CODE BELOW ############################
-        part_aiii_insert_sql = "INSERT INTO cast_bio(cast_id,cast_name,birthday,popularity) SELECT cast_id,cast_name,birthday,popularity FROM movie_cast"
+        part_aiii_insert_sql = "INSERT INTO cast_bio(cast_id,cast_name,birthday,popularity) SELECT DISTINCT cast_id,cast_name,birthday,popularity FROM movie_cast"
         ######################################################################
         
         self.execute_query(connection, part_aiii_insert_sql)
@@ -164,18 +165,26 @@ class HW2_sql():
     # Part c Calculate a Proportion [3 points]
     def part_c(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_c_sql = '''SELECT PRINTF("%.2f",CAST(selective AS REAL)/CAST(total AS REAL)*100)
+        part_c_sql='''SELECT PRINTF("%.2f",CAST(SUM(selected) AS REAL)/CAST(COUNT(*) AS REAL)*100)
                     FROM
-                    (SELECT COUNT(*) AS selective
-                    FROM movie_cast 
-                    WHERE ((CAST(substr(birthday,-2,2) AS INT) >=68) 
-                    AND 
-                    (CAST(substr(birthday,-2,2) AS INT) <=85))
-                    OR
-                    (birthday=="None"))
-                    CROSS JOIN
-                    (SELECT COUNT(*) AS total FROM movie_cast)
-                    '''
+                    (SELECT *,CASE
+                        WHEN ((CAST(substr(birthday,-2,2) AS INT) >=68) AND (CAST(substr(birthday,-2,2) AS INT) <=85)) THEN 1
+                        WHEN (birthday=="None") THEN 0
+                        ELSE 0
+                    END AS selected
+                    FROM cast_bio) AS tmp'''
+        # part_c_sql = '''SELECT PRINTF("%.2f",CAST(selective AS REAL)/CAST(total AS REAL)*100)
+        #             FROM
+        #             (SELECT COUNT(*) AS selective
+        #             FROM movie_cast 
+        #             WHERE ((CAST(substr(birthday,-2,2) AS INT) >=68) 
+        #             AND 
+        #             (CAST(substr(birthday,-2,2) AS INT) <=85))
+        #             OR
+        #             (birthday=="None"))
+        #             INNER JOIN
+        #             (SELECT COUNT(*) AS total FROM movie_cast)
+        #             '''
         ######################################################################
         cursor = connection.execute(part_c_sql)
         return cursor.fetchall()[0][0]
@@ -213,7 +222,18 @@ class HW2_sql():
     # Part f Get High Scoring Actors [4 points]
     def part_f(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_f_sql = ""
+        part_f_sql = '''SELECT cast_id,cast_name,PRINTF("%.2f",AVG(score)) as average_score
+FROM
+(SELECT id,title,score,cast_id,cast_name
+FROM movies
+INNER JOIN movie_cast
+ON movies.id=movie_cast.movie_id
+WHERE score>=25) AS tmp
+GROUP BY cast_id,cast_name
+HAVING COUNT(id)>=3
+ORDER BY average_score DESC,cast_name ASC
+LIMIT 10'''
+
         ######################################################################
         cursor = connection.execute(part_f_sql)
         return cursor.fetchall()
@@ -221,13 +241,38 @@ class HW2_sql():
     # Part g Creating Views [6 points]
     def part_g(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_g_sql = ""
+        part_g_sql = '''CREATE VIEW good_collaboration
+                        AS
+                        SELECT first_id AS cast_member_id1,second_id AS cast_member_id2,COUNT(movie_id) AS movie_count,AVG(score) AS average_movie_score
+                        FROM
+                        (SELECT A.movie_id,A.cast_id AS first_id,A.cast_name AS first_name,B.cast_id AS second_id,B.cast_name AS second_name
+                        FROM movie_cast AS A
+                        INNER JOIN movie_cast B
+                        On A.movie_id=B.movie_id AND A.cast_id<B.cast_id
+                        WHERE A.cast_id!=B.cast_id) AS tmp
+                        INNER JOIN movies
+                        ON tmp.movie_id=movies.id
+                        GROUP BY first_id,first_name,second_id,second_name
+                        HAVING movie_count>=3 and average_movie_score>=40'''
         ######################################################################
         return self.execute_query(connection, part_g_sql)
     
     def part_gi(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_g_i_sql = ""
+        part_g_i_sql = '''SELECT id AS cast_id,cast_name,printf("%.2f",tmp.collaboration_score_raw) AS collaboration_score
+                        FROM
+                        (SELECT cast_member_id1 AS id,AVG(average_movie_score) as collaboration_score_raw FROM
+                        (SELECT cast_member_id1,average_movie_score
+                        FROM good_collaboration
+                        UNION ALL
+                        SELECT cast_member_id2 AS cast_member_id1,average_movie_score
+                        FROM good_collaboration)
+                        GROUP BY cast_member_id1
+                        ORDER BY collaboration_score_raw DESC
+                        LIMIT 5) AS tmp
+                        LEFT JOIN cast_bio
+                        ON tmp.id=cast_bio.cast_id
+                        ORDER BY collaboration_score_raw DESC,cast_name ASC'''
         ######################################################################
         cursor = connection.execute(part_g_i_sql)
         return cursor.fetchall()
@@ -263,8 +308,7 @@ class HW2_sql():
 if __name__ == "__main__":
     
     ########################### DO NOT MODIFY THIS SECTION ##########################
-    #################################################################################
-    os.chdir('C:/Users/haris/Desktop/CSC_6242/HW1/Q2_Haris')
+    #################################################################################s
     if SHOW == True:
         sample = Sample()
         sample.sample()
