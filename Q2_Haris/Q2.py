@@ -8,7 +8,7 @@ import csv
 #################################################################################
 
 ## Change to False to disable Sample
-SHOW = False
+SHOW = True
 
 ############### SAMPLE CLASS AND SQL QUERY ###########################
 ######################################################################
@@ -165,26 +165,13 @@ class HW2_sql():
     # Part c Calculate a Proportion [3 points]
     def part_c(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_c_sql='''SELECT PRINTF("%.2f",CAST(SUM(selected) AS REAL)/CAST(COUNT(*) AS REAL)*100)
+        part_c_sql='''SELECT PRINTF("%.2f",CAST(SUM(selected) AS float)/CAST(COUNT(*) AS float)*100) AS field
                     FROM
-                    (SELECT *,CASE
-                        WHEN ((CAST(substr(birthday,-2,2) AS INT) >=68) AND (CAST(substr(birthday,-2,2) AS INT) <=85)) THEN 1
-                        WHEN (birthday=="None") THEN 0
-                        ELSE 0
-                    END AS selected
-                    FROM cast_bio) AS tmp'''
-        # part_c_sql = '''SELECT PRINTF("%.2f",CAST(selective AS REAL)/CAST(total AS REAL)*100)
-        #             FROM
-        #             (SELECT COUNT(*) AS selective
-        #             FROM movie_cast 
-        #             WHERE ((CAST(substr(birthday,-2,2) AS INT) >=68) 
-        #             AND 
-        #             (CAST(substr(birthday,-2,2) AS INT) <=85))
-        #             OR
-        #             (birthday=="None"))
-        #             INNER JOIN
-        #             (SELECT COUNT(*) AS total FROM movie_cast)
-        #             '''
+                        (SELECT *,CASE
+                            WHEN ((CAST(substr(birthday,-2) AS INTEGER) >=65) AND (CAST(substr(birthday,-2) AS INTEGER) <=85)) THEN 1
+                            ELSE 0
+                            END AS selected
+                            FROM cast_bio) AS tmp'''
         ######################################################################
         cursor = connection.execute(part_c_sql)
         return cursor.fetchall()[0][0]
@@ -280,11 +267,22 @@ LIMIT 10'''
     # Part h FTS [4 points]
     def part_h(self,connection,path):
         ############### EDIT SQL STATEMENT ###################################
-        part_h_sql = ""
+        part_h_sql ='''CREATE VIRTUAL TABLE movie_overview USING fts3(id INTEGER, overview TEXT);'''
         ######################################################################
         connection.execute(part_h_sql)
         ############### CREATE IMPORT CODE BELOW ############################
-        
+
+        cursor=connection.cursor()
+
+        '''Inserting into movie_overview'''
+        query='''INSERT INTO movie_overview(id,overview) 
+        VALUES (?,?);'''
+
+        with open('data/movie_overview.csv',newline='',encoding='UTF-8-sig') as csvfile:
+            reader=csv.reader(csvfile,delimiter=',')
+            for row in reader:
+                vals=(int(row[0]),row[1])
+                cursor.execute(query,vals)   
         ######################################################################
         sql = "SELECT COUNT(id) FROM movie_overview;"
         cursor = connection.execute(sql)
@@ -292,14 +290,14 @@ LIMIT 10'''
         
     def part_hi(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_hi_sql = ""
+        part_hi_sql = '''SELECT COUNT(*) FROM movie_overview WHERE overview MATCH 'fight'  '''
         ######################################################################
         cursor = connection.execute(part_hi_sql)
         return cursor.fetchall()[0][0]
     
     def part_hii(self,connection):
         ############### EDIT SQL STATEMENT ###################################
-        part_hii_sql = ""
+        part_hii_sql = "SELECT COUNT(*) FROM movie_overview WHERE overview MATCH 'space NEAR/5 program'"
         ######################################################################
         cursor = connection.execute(part_hii_sql)
         return cursor.fetchall()[0][0]
