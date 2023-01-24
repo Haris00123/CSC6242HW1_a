@@ -6,6 +6,13 @@
 <head>
   <style>
     <!-- define CSS rules -->
+    div.bar {
+    display: inline-block;
+    width: 20px;
+    height: 75px;
+    background-color: teal;
+    margin-right: 2px;
+  }
   </style>
 <html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
 <!--[if gte mso 9]><xml>
@@ -25,16 +32,17 @@
 <mso:MediaLengthInSeconds msdt:dt="string"></mso:MediaLengthInSeconds>
 </mso:CustomDocumentProperties>
 </xml><![endif]-->
-<title></title></head>
+<title></title>
+</head>
 
 <body>
-
   <script src="lib/d3/d3.min.js"></script>
   <script src="lib/d3-dsv/d3-dsv.min.js"></script>
   <script src="lib/d3-fetch/d3-fetch.min.js"></script>
 
 
   <script>
+
     // define the dimensions and margins for the graph
 
 
@@ -48,18 +56,29 @@
     // append svg element to the body of the page
     // set dimensions and position of the svg element
     var svg = d3.select("body").append("svg") 
+    var w = 1000
+    var h = 1000
 
+    svg.attr('width',w).attr('height',h);
 
     // Get the data
-	var pathToCsv = "";		// path to csv
-	
-    d3.dsv(",", pathToCsv, function (d) {
+	  var pathToCsv = "q3.csv";		// path to csv
+    var dataset
+
+	  var rowConverter = function(d){
       return {
-        // format data attributes if required
+        year:parseInt(d.year),
+        running_total:parseInt(d.running_total)
+      }
+    }
+
+    d3.csv(pathToCsv, function (d) {
+      return {
+        d: rowConverter(d)
       }
     }).then(function (data) {
       console.log(data); // you should see the data in your browser's developer tools console 
-      
+    
       /* Create bar plot using data from csv */
 
       // set the domains of X and Y scales based on data
