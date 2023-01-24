@@ -58,6 +58,7 @@
     var svg = d3.select("body").append("svg") 
     var w = 1000
     var h = 1000
+    var barPadding=2
 
     svg.attr('width',w).attr('height',h);
 
@@ -74,19 +75,53 @@
 
     d3.csv(pathToCsv, function (d) {
       return {
-        d: rowConverter(d)
+        d:rowConverter(d)
       }
     }).then(function (data) {
       console.log(data); // you should see the data in your browser's developer tools console 
     
       /* Create bar plot using data from csv */
+      
+      dataset=data
+      
+      svg.selectAll('rect')
+        .data(dataset)
+        .enter()
+        .append('rect')
+        .attr('x',0)
+        .attr('y',0)
+        .attr('x',function(d,i){
+          return i*w/dataset.length;
+        })
+        .attr('width',w/dataset.length-barPadding)
+        .attr('height',function(d){
+          return d.d.running_total;
+        })
+        .attr('y',function(d){
+          return h-d.d.running_total
+        })
+        .attr('fill','#B5D3E7');
+
+        // svg.selectAll('text')
+        // .data(dataset)
+        // .enter()
+        // .append('text')
+        // .text(function(d){
+        //   return d.d.running_total;
+        // })
+        // .attr('x',function(d,i){
+        //   return i*(w/dataset.length);
+        // })
+        // .attr('y',function(d){
+        //   return h-(d.d.running_total*4);
+        // })
 
       // set the domains of X and Y scales based on data
       x.domain();
       y.domain();
 
       // Add bars to svg - create new elements based on your data
-      svg.selectAll()
+
 
 
       // Add the X Axis
