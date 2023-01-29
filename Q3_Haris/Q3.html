@@ -168,17 +168,15 @@
         .attr('transform','translate(' + margin.left + ', 0)')
         .call(y_axis);
 
-        container.append('text')
-        .attr('id','_axis_label')
-        .attr('x',0)
-        .attr('y',height/2)
+      container.append('text')
+        .attr('id','y_axis_label')
+        .attr('transform','rotate(-90) translate('+ -(height-(2*margin.top))/2 + ',10)')
         .text('Running Total');
 
       container.append('text')
         .attr('id','credit')
         .attr('x',width-margin.right*3)
         .attr('y',height)
-        .attr('transform','rotate(-45)')
         .text('mmasood30');
 
       container.append('text')
