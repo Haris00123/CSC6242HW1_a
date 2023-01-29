@@ -5,14 +5,21 @@
 
 <head>
   <style>
-    <!-- define CSS rules -->
     div.bar {
-    display: inline-block;
-    width: 20px;
-    height: 75px;
-    background-color: teal;
-    margin-right: 2px;
-  }
+      display: inline-block;
+      width: 20px;
+      height: 75px;
+      background-color: teal;
+      margin-right: 2px;
+    };
+
+    .title {
+      font-size: 100px;
+    };
+
+    .axis  {
+      font-family: Optima, Futura, sans-serif;
+    };
   </style>
 <html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
 <!--[if gte mso 9]><xml>
@@ -32,7 +39,7 @@
 <mso:MediaLengthInSeconds msdt:dt="string"></mso:MediaLengthInSeconds>
 </mso:CustomDocumentProperties>
 </xml><![endif]-->
-<title></title>
+<title>Running Total of TMDb Movies by Year</title>
 </head>
 
 <body>
@@ -44,23 +51,30 @@
   <script>
 
     // define the dimensions and margins for the graph
-
+    margin = ({top: 30, right: 30, bottom: 30, left: 50})
+    var width = 960
+    var height = 500
 
     // define function to parse time in years format
-	
+    
+    var parseTime=d3.timeParse('%Y')
+    var func_parse_time = function(d){
+      return parseTime(d)
+    }
+    
 
     // create scales x & y for X and Y axis and set their ranges
-
-
+    
+    var x=d3.scaleTime().range([0,width-margin.right])
+    var y=d3.scaleLinear().range([height-margin.bottom,0])
 
     // append svg element to the body of the page
     // set dimensions and position of the svg element
-    var svg = d3.select("body").append("svg") 
-    var w = 1000
-    var h = 1000
-    var barPadding=2
+    var svg = d3.select("body").append("svg").attr('id','svg1')
+    svg.attr('width',width).attr('height',height);
 
-    svg.attr('width',w).attr('height',h);
+    container=svg.append('g')
+      .attr('id','container')
 
     // Get the data
 	  var pathToCsv = "q3.csv";		// path to csv
@@ -68,7 +82,7 @@
 
 	  var rowConverter = function(d){
       return {
-        year:parseInt(d.year),
+        year:func_parse_time(d.year),
         running_total:parseInt(d.running_total)
       }
     }
@@ -83,58 +97,104 @@
       /* Create bar plot using data from csv */
       
       dataset=data
-      
-      svg.selectAll('rect')
-        .data(dataset)
-        .enter()
-        .append('rect')
-        .attr('x',0)
-        .attr('y',0)
-        .attr('x',function(d,i){
-          return i*w/dataset.length;
-        })
-        .attr('width',w/dataset.length-barPadding)
-        .attr('height',function(d){
-          return d.d.running_total;
-        })
-        .attr('y',function(d){
-          return h-d.d.running_total
-        })
-        .attr('fill','#B5D3E7');
 
-        // svg.selectAll('text')
-        // .data(dataset)
-        // .enter()
-        // .append('text')
-        // .text(function(d){
-        //   return d.d.running_total;
-        // })
-        // .attr('x',function(d,i){
-        //   return i*(w/dataset.length);
-        // })
-        // .attr('y',function(d){
-        //   return h-(d.d.running_total*4);
-        // })
 
       // set the domains of X and Y scales based on data
-      x.domain();
-      y.domain();
+
+      var y_scale=d3.scaleLinear();
+      var barPadding=2
+
+      var max_year=d3.max(dataset,function(d){
+        return d.d.year
+      });
+
+      var min_year=d3.min(dataset,function(d){
+        return d.d.year
+      });
+
+      
+      var max_cum=d3.max(dataset,function(d){
+        return d.d.running_total
+      });
+
+      var min_cum=d3.min(dataset,function(d){
+        return d.d.running_total
+      });
+
+
+      x.domain([min_year,max_year]);
+      y.domain([max_cum,min_cum]);
+      y_scale.range([height-margin.bottom,0]).domain([min_cum,max_cum]);
 
       // Add bars to svg - create new elements based on your data
 
-
+      container.append('g')
+        .attr('id','bars')
+        .selectAll('rect')
+        .data(dataset)
+        .enter()
+        .append('rect')
+        .attr('x',function(d,i){
+          return x(d.d.year);
+        })
+        .attr('width',width/dataset.length-barPadding)
+        .attr('height',function(d){
+          return y(d.d.running_total);
+        })
+        .attr('y',function(d){
+          return height+-y(d.d.running_total)-margin.bottom
+        })
+        .attr('fill','#B5D3E7');
 
       // Add the X Axis
-      svg.append()
+      var x_axis=d3.axisBottom().scale(x).tickFormat(d3.timeFormat(['%Y'])).ticks(d3.timeYear.every(10));
+
+      container.append('g')
+        .attr('id','x_axis')
+        .attr('transform','translate(0,' + (height-margin.bottom) + ')')
+        .call(x_axis);
+
+        container.append('text')
+        .attr('id','x_axis_label')
+        .attr('x',(width-(margin.left+margin.right)/2)/2)
+        .attr('y',height)
+        .text('Year');
 
       // Add the text label for X Axis
-      svg.append()
+      var y_axis=d3.axisLeft().scale(y_scale).tickValues(d3.range(0,max_cum,20000));
 
-      // Add the Y Axis
-      svg.append()
+      container.append('g')
+        .attr('id','y_axis')
+        .attr('transform','translate(' + margin.left + ', 0)')
+        .call(y_axis);
 
-      // Add the text label for Y axis
-      svg.append()
+        container.append('text')
+        .attr('id','_axis_label')
+        .attr('x',0)
+        .attr('y',height/2)
+        .text('Running Total');
+
+      container.append('text')
+        .attr('id','credit')
+        .attr('x',width-margin.right*3)
+        .attr('y',height)
+        .attr('transform','rotate(-45)')
+        .text('mmasood30');
+
+      container.append('text')
+        .attr('id','title')
+        .attr('x',(width-margin.right-margin.left)/2)
+        .attr('y',margin.top)
+        .text('Running Total of TMDb Movies by Year')
+        .attr('font-size',22)
+      
+        
+
+      // // Add the Y Axis
+      // svg.append()
+
+      // // Add the text label for Y axis
+      // svg.append()
 
 
     }).catch(function (error) {
